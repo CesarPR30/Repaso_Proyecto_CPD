@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repaso Ranking Sort</title>
+<meta name="description" content="Repaso paso a paso del Proyecto 4 de CS4052: Ranking Sort en grilla MPI. Qué se hizo y por qué.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+/* Paleta tomada de la grilla del algoritmo: azul = procesos P_ij, naranja = diagonal P_ii
+   (raíz de Broadcast y Reduce). Verde = "por qué", rojo = descartado. */
+:root {
+  --bg: #f5f7fa; --surface: #ffffff; --ink: #17202c; --muted: #586476; --line: #dbe1e9;
+  --blue: #2c68ad; --blue-soft: #e3ecf7; --orange: #c9631a; --orange-soft: #fbe8d6;
+  --green: #2f7d4f; --green-soft: #e0f1e6; --red: #b23a3a; --red-soft: #f8e1e1;
+  --c0: #2c68ad; --c1: #b23a3a; --c2: #2f7d4f;
+  --code-bg: #f0f3f7; --code-ink: #1d2733; --code-com: #5f7a5f; --code-mpi: #c9631a; --code-kw: #8a3fb0;
+  --fig-bg: #ffffff;
+  --f-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --surface: #161d27; --ink: #e4e9f0; --muted: #98a4b4; --line: #283343;
+    --blue: #74a8e8; --blue-soft: #1b2b41; --orange: #f0974f; --orange-soft: #3a2615;
+    --green: #6cc392; --green-soft: #173325; --red: #ec8484; --red-soft: #3a1c1c;
+    --c0: #74a8e8; --c1: #ec8484; --c2: #6cc392;
+    --code-bg: #0b1017; --code-ink: #d6dde7; --code-com: #7f9a7f; --code-mpi: #f0974f; --code-kw: #c792ea;
+    --fig-bg: #f4f6f9;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #161d27; --ink: #e4e9f0; --muted: #98a4b4; --line: #283343;
+  --blue: #74a8e8; --blue-soft: #1b2b41; --orange: #f0974f; --orange-soft: #3a2615;
+  --green: #6cc392; --green-soft: #173325; --red: #ec8484; --red-soft: #3a1c1c;
+  --c0: #74a8e8; --c1: #ec8484; --c2: #6cc392;
+  --code-bg: #0b1017; --code-ink: #d6dde7; --code-com: #7f9a7f; --code-mpi: #f0974f; --code-kw: #c792ea;
+  --fig-bg: #f4f6f9;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 var(--f-body); }
+a { color: var(--blue); }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.2; }
+code, .mono { font-family: var(--f-mono); font-size: .9em; }
+:not(pre) > code { background: var(--code-bg); padding: .1em .35em; border-radius: 4px; }
+
+.layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); max-width: 1240px; margin: 0 auto; }
+nav.toc { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 28px 18px 28px 20px; border-right: 1px solid var(--line); }
+.toc .brand { font-family: var(--f-display); font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
+.toc .sub { color: var(--muted); font-size: .82rem; margin-bottom: 20px; }
+.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: s -1; }
+.toc li { counter-increment: s; }
+.toc a { display: flex; gap: 10px; align-items: baseline; padding: 6px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; font-size: .9rem; }
+.toc a::before { content: counter(s); font-family: var(--f-mono); font-size: .75rem; min-width: 1.4em; color: var(--blue); }
+.toc a:hover { background: var(--blue-soft); color: var(--ink); }
+.toc a.active { background: var(--blue-soft); color: var(--ink); font-weight: 600; }
+.theme-btn { margin-top: 20px; font: inherit; font-size: .82rem; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+
+main { padding: 40px 48px 120px; min-width: 0; }
+section.step { max-width: 820px; padding: 36px 0 28px; border-bottom: 1px solid var(--line); }
+.kicker { font-family: var(--f-mono); font-size: .78rem; color: var(--blue); letter-spacing: .06em; text-transform: uppercase; }
+h1 { font-size: clamp(2rem, 5vw, 2.9rem); margin: 8px 0 14px; }
+h2 { font-size: 1.7rem; margin: 6px 0 16px; }
+h3 { font-size: 1.15rem; margin: 26px 0 8px; }
+.lead { font-size: 1.12rem; color: var(--muted); }
+
+.why, .what, .drop { border-radius: 10px; padding: 14px 18px; margin: 18px 0; border-left: 4px solid; }
+.what { background: var(--blue-soft); border-color: var(--blue); }
+.why  { background: var(--green-soft); border-color: var(--green); }
+.drop { background: var(--red-soft); border-color: var(--red); }
+.why > b:first-child, .what > b:first-child, .drop > b:first-child { display: block; font-family: var(--f-display); margin-bottom: 4px; }
+.why p, .what p, .drop p { margin: 6px 0; }
+.why ul, .what ul, .drop ul { margin: 6px 0; padding-left: 20px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 18px 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.tldr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 22px 0; }
+.tldr .card { margin: 0; }
+.tldr .num { font-family: var(--f-display); font-size: 1.6rem; font-weight: 700; color: var(--orange); }
+.tldr .lbl { font-size: .88rem; color: var(--muted); }
+
+.table-wrap { overflow-x: auto; margin: 14px 0; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; background: var(--surface); }
+th, td { border-bottom: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+th { font-family: var(--f-display); font-weight: 600; background: var(--code-bg); }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.ok { color: var(--green); font-weight: 600; }
+.mid { color: var(--orange); font-weight: 600; }
+
+pre { background: var(--code-bg); color: var(--code-ink); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; font: 13px/1.55 var(--f-mono); }
+pre .c { color: var(--code-com); font-style: italic; }
+pre .m { color: var(--code-mpi); font-weight: 600; }
+pre .k { color: var(--code-kw); }
+
+figure { margin: 18px 0; }
+figure img { width: 100%; height: auto; background: var(--fig-bg); border-radius: 10px; border: 1px solid var(--line); padding: 8px; display: block; }
+figcaption { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+
+/* ---- Simulador ---- */
+.sim-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.btn { font: 600 .88rem var(--f-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--blue); }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: var(--bg); }
+.btn:disabled { opacity: .4; cursor: default; }
+.phases { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.phase-pill { font: 500 .8rem var(--f-mono); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); background: none; cursor: pointer; }
+.phase-pill.on { background: var(--orange-soft); border-color: var(--orange); color: var(--ink); }
+.sim-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; }
+.pcell { border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 6px 8px; background: var(--surface); min-height: 96px; transition: background .25s, border-color .25s; }
+.pcell.diag { background: var(--orange-soft); border-color: var(--orange); }
+.pcell.dim { opacity: .55; }
+.pcell .pid { font: 600 .72rem var(--f-mono); color: var(--muted); display: flex; justify-content: space-between; }
+.pcell .row { font: 600 .9rem var(--f-mono); letter-spacing: .04em; margin-top: 3px; white-space: nowrap; overflow: hidden; }
+.pcell .row.lbl::before { content: attr(data-l); font-size: .62rem; color: var(--muted); margin-right: 5px; font-weight: 400; }
+.pcell .row.nums { color: var(--ink); font-weight: 400; }
+.pcell .row.big { color: var(--orange); font-weight: 700; }
+.pcell .row.new { animation: flash .8s; }
+@keyframes flash { from { background: var(--orange-soft); } to { background: transparent; } }
+.l0 { color: var(--c0); } .l1 { color: var(--c1); } .l2 { color: var(--c2); }
+.flow { font: .78rem var(--f-mono); color: var(--orange); }
+.sim-text h4 { font-family: var(--f-display); margin: 0 0 4px; font-size: 1.1rem; }
+.sim-text .mpi { font: 600 .82rem var(--f-mono); color: var(--orange); margin-bottom: 8px; }
+.sim-text p { margin: 6px 0; font-size: .95rem; }
+.outarr { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 14px; }
+.outarr span { font: 600 .85rem var(--f-mono); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; text-align: center; background: var(--surface); }
+.outarr span small { display: block; font-size: .6rem; color: var(--muted); font-weight: 400; }
+
+/* ---- calculadoras ---- */
+.calc label { font-size: .88rem; color: var(--muted); display: block; margin-bottom: 4px; }
+.calc input, .calc select { font: 1rem var(--f-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); width: 100%; }
+.calc .inrow { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.calc .inrow > div { flex: 1; min-width: 140px; }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.kv div { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.kv b { display: block; font: 700 1.15rem var(--f-display); }
+.kv small { color: var(--muted); font-size: .78rem; }
+
+/* ---- timeline betas ---- */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before { content: ""; position: absolute; left: 9px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.tl-item { position: relative; margin-bottom: 18px; }
+.tl-item::before { content: ""; position: absolute; left: -24px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--blue); border: 2px solid var(--bg); }
+.tl-item.final::before { background: var(--orange); }
+.tl-item.discard::before { background: var(--red); }
+.tl-item h3 { margin-top: 0; }
+
+details.q { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; margin: 10px 0; }
+details.q summary { cursor: pointer; font-weight: 600; }
+details.q[open] summary { margin-bottom: 6px; }
+
+footer { color: var(--muted); font-size: .85rem; padding-top: 30px; max-width: 820px; }
+
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; }
+  nav.toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; }
+  .toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+  .toc a { padding: 4px 8px; font-size: .82rem; }
+  main { padding: 20px 16px 80px; }
+  .sim-body, .grid2 { grid-template-columns: 1fr; }
+  .tldr { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .pcell .row { font-size: .72rem; letter-spacing: 0; }
+  .pgrid { gap: 5px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Pasos">
+  <div class="brand">Ranking Sort · MPI</div>
+  <div class="sub">CS4052 · Repaso del proyecto</div>
+  <ol>
+    <li><a href="#inicio">Resumen</a></li>
+    <li><a href="#problema">El problema</a></li>
+    <li><a href="#paralelismo">¿Por qué paralelizar?</a></li>
+    <li><a href="#intento1">Primer intento</a></li>
+    <li><a href="#esquema">El esquema de 6 fases</a></li>
+    <li><a href="#simulador">Simulador paso a paso</a></li>
+    <li><a href="#pram">Modelo PRAM: CREW</a></li>
+    <li><a href="#metricas">Métricas teóricas</a></li>
+    <li><a href="#implementacion">Implementación MPI</a></li>
+    <li><a href="#betas">Las 3 versiones beta</a></li>
+    <li><a href="#quicksort">Quicksort de referencia</a></li>
+    <li><a href="#experimentos">Experimentos</a></li>
+    <li><a href="#hipotesis">Hipótesis vs. medición</a></li>
+    <li><a href="#mejoras">Mejoras</a></li>
+    <li><a href="#repaso">Preguntas de repaso</a></li>
+  </ol>
+  <button class="theme-btn" id="themeBtn" type="button">Cambiar tema</button>
+</nav>
+
+<main>
+
+<!-- ============================ 0 ============================ -->
+<section class="step" id="inicio">
+  <div class="kicker">Proyecto 4 · Computación Paralela y Distribuida</div>
+  <h1>Ranking Sort en una grilla de procesos MPI</h1>
+  <p class="lead">Un recorrido paso a paso por lo que se hizo en el proyecto y, sobre todo, <em>por qué</em> se tomó cada decisión: del algoritmo secuencial de \(n^2\) comparaciones al pipeline de seis fases en MPI, su análisis teórico y las mediciones que lo confirman (o no).</p>
+
+  <div class="tldr">
+    <div class="card"><div class="num">\(\Theta(\sqrt p)\)</div><div class="lbl">Speedup de cómputo esperado y medido (en operaciones, error &lt; 2 %). No es lineal porque el esquema repite trabajo.</div></div>
+    <div class="card"><div class="num">3 betas</div><div class="lbl">Beta 1 funcional → Beta 2 experimento de Gossip → Beta 3 colectivas simples (versión final).</div></div>
+    <div class="card"><div class="num">370/370</div><div class="lbl">Ejecuciones verificadas: permutación, orden, estabilidad y pares originales.</div></div>
+  </div>
+
+  <div class="what"><b>La idea en una frase</b>
+    <p>Cada elemento sabe su posición final si cuenta cuántos elementos son menores que él. El proyecto reparte ese conteo en una grilla \(q\times q\) de procesos, donde cada proceso compara un bloque contra otro usando <em>ordenar + búsqueda binaria</em>, y luego suma los conteos parciales por fila.</p>
+  </div>
+  <p>Usa el índice de la izquierda para saltar entre pasos. El paso 5 tiene un simulador que reproduce la figura del enunciado fase por fase.</p>
+</section>
+
+<!-- ============================ 1 ============================ -->
+<section class="step" id="problema">
+  <div class="kicker">Paso 1</div>
+  <h2>El problema: ordenar por ranking</h2>
+  <p>Se quiere ordenar \(A[0..n-1]\). El <b>ranking</b> de un elemento es cuántos elementos deben ir antes que él; ese número <em>es</em> su posición final:</p>
+  $$\mathit{rank}[i] = \#\{\,j : A[j] < A[i]\,\} + \#\{\,j : A[j] = A[i] \wedge j < i\,\}$$
+  <p>Luego basta con \(B[\mathit{rank}[i]] \leftarrow A[i]\).</p>
+
+  <div class="why"><b>¿Por qué el segundo término (desempate por índice)?</b>
+    <p>Sin él, dos valores iguales tendrían el mismo ranking y chocarían en la misma celda de \(B\). Con el desempate, los rankings forman una <b>permutación</b> de \(0..n-1\): cada posición se escribe exactamente una vez y el orden es <b>estable</b> (entre iguales va primero el de menor índice). Por eso en el código cada elemento viaja como el par <code>(clave, índice)</code>.</p>
+  </div>
+
+  <div class="card calc">
+    <b style="font-family:var(--f-display)">Pruébalo: calcula los rankings</b>
+    <div class="inrow" style="margin-top:10px">
+      <div><label for="rkIn">Arreglo A (separado por comas)</label><input id="rkIn" value="7, 3, 9, 3, 1"></div>
+    </div>
+    <div class="table-wrap" id="rkOut"></div>
+    <div id="rkB" class="mono" style="font-size:.95rem"></div>
+  </div>
+
+  <p>El algoritmo secuencial hace una comparación por cada par \((i,j)\): <b>\(n^2\) comparaciones</b>, una por celda de la llamada <b>matriz de comparaciones</b> \(n\times n\). Es mucho peor que Quicksort o Mergesort (\(n\log n\)).</p>
+</section>
+
+<!-- ============================ 2 ============================ -->
+<section class="step" id="paralelismo">
+  <div class="kicker">Paso 2</div>
+  <h2>¿Por qué vale la pena paralelizarlo?</h2>
+  <p>Si es tan lento en secuencial, ¿por qué elegirlo? Porque tiene una propiedad que casi ningún otro ordenamiento tiene:</p>
+  <div class="why"><b>Las \(n^2\) comparaciones son independientes</b>
+    <ul>
+      <li>Calcular \(\mathit{rank}[i]\) solo requiere <b>leer</b> \(A\), que nunca cambia.</li>
+      <li>No necesita conocer \(\mathit{rank}[j]\) de ningún otro elemento: no hay cadena de dependencias (a diferencia de Insertion Sort).</li>
+      <li>Las escrituras finales van a celdas distintas (es una permutación).</li>
+    </ul>
+    <p>Cualquier subconjunto de celdas de la matriz se puede calcular en cualquier orden y por cualquier procesador. Esa libertad es la que se explota en todo el proyecto.</p>
+  </div>
+</section>
+
+<!-- ============================ 3 ============================ -->
+<section class="step" id="intento1">
+  <div class="kicker">Paso 3</div>
+  <h2>Primer intento: franjas de filas (informe parcial)</h2>
+  <div class="what"><b>Qué se hizo</b>
+    <p>En el informe parcial se diseñó un PRAM CREW simple: con \(b=\lceil n/p\rceil\), el procesador \(P_k\) se queda con \(b\) filas consecutivas de la matriz y recorre cada fila completa (las \(n\) columnas). Cada ranking se calcula entero dentro de un solo procesador; solo hay dos barreras (inicio y fin).</p>
+    <p>Costo: \(\lceil n/p\rceil\cdot n\) comparaciones en el procesador más cargado, es decir \(T_p = \Theta(n^2/p)\): speedup lineal, pero sobre un algoritmo de \(n^2\).</p>
+  </div>
+  <div class="drop"><b>Por qué se reemplazó</b>
+    <p>No seguía el esquema que pedía el enunciado (Input → Gossip → Broadcast → Sort → Local ranking → Reduce). Además, cada procesador necesita leer <em>todo</em> \(A\): en memoria distribuida eso significa replicar el arreglo completo en cada proceso. Se conserva en el anexo del informe como registro del proceso.</p>
+  </div>
+</section>
+
+<!-- ============================ 4 ============================ -->
+<section class="step" id="esquema">
+  <div class="kicker">Paso 4</div>
+  <h2>El esquema del enunciado: grilla \(q\times q\) y seis fases</h2>
+  <p>El enunciado propone \(p=q^2\) procesos en una grilla. La matriz de comparaciones se parte en \(q\times q\) bloques de \((n/q)\times(n/q)\): el proceso \(P_{i,j}\) es dueño del bloque “elementos de \(B_i\) contra elementos de \(B_j\)”.</p>
+
+  <figure>
+    <img src="assets/figuras/enunciado.png" alt="Figura del enunciado: seis paneles de una grilla 3x3 de procesos con las fases Input, Gossip, Broadcast, Sort, Local ranking y Reduce sobre las letras a a r" loading="lazy">
+    <figcaption>Figura del enunciado: \(n=18\) letras (a…r), grilla \(3\times3\), 2 letras por proceso.</figcaption>
+  </figure>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fase</th><th>Qué hace</th><th>Colectiva MPI</th><th>Por qué</th></tr></thead>
+    <tbody>
+      <tr><td>0 · Input</td><td>Reparte \(n/p\) elementos a cada proceso</td><td><code>Scatter</code></td><td>La entrada parte de un solo proceso</td></tr>
+      <tr><td>1 · Gossip</td><td>Cada columna \(j\) reúne su bloque \(B_j\) (\(n/\sqrt p\) elementos)</td><td><code>Allgather</code> en la columna</td><td>Cada proceso necesita el bloque “contra el que compara”</td></tr>
+      <tr><td>2 · Broadcast</td><td>La diagonal \(P_{i,i}\) envía \(B_i\) a toda su fila</td><td><code>Bcast</code> en la fila</td><td>\(P_{i,i}\) ya tiene \(B_i\) tras el Gossip; la fila necesita “a quién rankear”</td></tr>
+      <tr><td>3 · Sort</td><td>Ordena localmente \(B_j\)</td><td>local</td><td>Para poder usar búsqueda binaria</td></tr>
+      <tr><td>4 · Local ranking</td><td>Para cada elemento de \(B_i\), cuenta cuántos de \(B_j\) son menores</td><td>local (<code>lower_bound</code>)</td><td>\(\log\) en vez de recorrer el bloque celda a celda</td></tr>
+      <tr><td>5 · Reduce</td><td>Suma los conteos de la fila en la diagonal</td><td><code>Reduce(+)</code> en la fila</td><td>La fila \(i\) cubre todas las comparaciones de \(B_i\): la suma es el ranking global</td></tr>
+      <tr><td>6 · Output</td><td>Las diagonales mandan (rank, clave) a \(P_{0,0}\), que coloca \(B[\mathit{rank}]\)</td><td><code>Gather</code> en la diagonal</td><td>Post-procesamiento: no es un ordenamiento, el ranking ya es la posición</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="why"><b>La clave del diseño</b>
+    <p>En vez de comparar celda a celda (\((n/q)^2\) comparaciones por bloque), cada proceso <b>ordena</b> \(B_j\) y hace una <b>búsqueda binaria</b> por cada elemento de \(B_i\): \(O\big(\tfrac{n}{\sqrt p}\log\tfrac{n}{\sqrt p}\big)\). Con \(p=1\) el algoritmo se convierte en “ordenar y buscar”, que ya es \(\Theta(n\log n)\), no \(n^2\).</p>
+  </div>
+
+  <div class="what"><b>Dos detalles al leer la figura</b>
+    <ul>
+      <li>La figura cuenta con “\(\le\)” (cada letra se cuenta a sí misma) y obtiene posiciones \(1..n\). El proyecto usa “\(<\)” con desempate por índice: posiciones \(0..n-1\) y estabilidad con valores repetidos. Difieren en exactamente 1.</li>
+      <li>Ejemplo de verificación en \(P_{0,1}\): \(S=\) <code>b d e f h k</code> ordenado, \(R=\) <code>c j g m n l</code> ⇒ conteos <code>1 5 4 6 6 6</code>, igual que la figura.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 5 ============================ -->
+<section class="step" id="simulador">
+  <div class="kicker">Paso 5</div>
+  <h2>Simulador: el pipeline fase por fase</h2>
+  <p>Mismo ejemplo del enunciado (\(n=18\), \(q=3\)) con la convención 0-indexada del proyecto. El color de cada letra indica de qué columna proviene. Las celdas naranjas son los procesos diagonales \(P_{i,i}\).</p>
+
+  <div class="card">
+    <div class="sim-controls">
+      <button class="btn" id="simPrev" type="button">← Anterior</button>
+      <button class="btn primary" id="simNext" type="button">Siguiente →</button>
+      <button class="btn" id="simShuffle" type="button">Barajar entrada</button>
+      <button class="btn" id="simReset" type="button">Entrada del enunciado</button>
+    </div>
+    <div class="phases" id="simPhases"></div>
+    <div class="sim-body">
+      <div>
+        <div class="pgrid" id="simGrid"></div>
+        <div class="outarr" id="simOut"></div>
+      </div>
+      <div class="sim-text" id="simText"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 6 ============================ -->
+<section class="step" id="pram">
+  <div class="kicker">Paso 6</div>
+  <h2>Clasificación PRAM: CREW</h2>
+  <p>El enunciado pide ubicar el algoritmo en la taxonomía PRAM. Se interpreta cada colectiva como el acceso a una memoria común que reemplaza:</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Fase</th><th>Acceso equivalente en PRAM</th></tr></thead>
+    <tbody>
+      <tr><td>Scatter</td><td>Cada procesador lee su tramo disjunto: lectura <b>exclusiva</b></td></tr>
+      <tr><td>Allgather / Bcast</td><td>\(\sqrt p\) procesadores leen el mismo bloque: lectura <b>concurrente</b></td></tr>
+      <tr><td>Sort / Local ranking</td><td>Solo datos locales</td></tr>
+      <tr><td>Reduce</td><td>Suma en árbol, cada celda la toca un procesador por ronda: <b>exclusivo</b></td></tr>
+      <tr><td>Output</td><td>\(\mathit{rank}\) es permutación: ninguna celda recibe dos escrituras</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><b>Por qué CREW y no otro</b>
+    <p>Hace falta lectura concurrente (Gossip y Broadcast) pero nunca escritura concurrente. EREW no alcanza; CRCW sería innecesariamente potente. En memoria distribuida, “leer concurrentemente entre \(\sqrt p\) procesos” se implementa en \(\lceil\log_2\sqrt p\rceil\) rondas de duplicación: de ahí sale el término \(\alpha\lceil\log_2\sqrt p\rceil\) del costo.</p>
+  </div>
+</section>
+
+<!-- ============================ 7 ============================ -->
+<section class="step" id="metricas">
+  <div class="kicker">Paso 7</div>
+  <h2>Métricas teóricas</h2>
+  <p>Unidad de cómputo: una comparación. Comunicación con el modelo \(\alpha\)–\(\beta\) (Grama et al.): un mensaje de \(w\) pares cuesta \(\alpha+\beta w\). Se asume \(p=q^2\) y \(p\mid n\). Solo Sort y Local ranking comparan.</p>
+
+  <h3>Cómputo por proceso y secuencial</h3>
+  $$T_{\text{comp}}(n,p)=\frac{n}{\sqrt p}\Big(2\Big\lceil\log_2\frac{n}{\sqrt p}\Big\rceil+1\Big)=\Theta\!\Big(\frac{n\log n}{\sqrt p}\Big),\qquad T_s=T_{\text{comp}}(n,1)=\Theta(n\log n)$$
+
+  <h3>Trabajo: aquí está el punto central</h3>
+  $$W(n,p)=p\,T_{\text{comp}}=\Theta\big(n\sqrt p\,\log n\big),\qquad \frac{W}{T_s}=\sqrt p\,\lambda,\quad \tfrac12\lesssim\lambda\le1$$
+  <div class="why"><b>¿Por qué el trabajo crece con \(\sqrt p\)?</b>
+    <p>El algoritmo <b>no es work-preserving</b>. Hay redundancia por dos vías: cada bloque \(B_j\) se ordena \(\sqrt p\) veces (una por cada proceso de la columna \(j\)), y cada elemento de \(B_i\) se busca en los \(\sqrt p\) bloques de su fila. Es inherente al esquema del enunciado. Todo lo demás (speedup \(\sqrt p\), eficiencia \(1/\sqrt p\), sin isoeficiencia) se deriva de este hecho.</p>
+  </div>
+
+  <h3>Comunicación y tiempo paralelo</h3>
+  $$T_{\text{comm}}=\alpha\big(\lceil\log_2 p\rceil+3\lceil\log_2\sqrt p\rceil\big)+\beta\Big(n-\tfrac{2n}{p}+\tfrac{n}{\sqrt p}+\tfrac{2n}{\sqrt p}\lceil\log_2\sqrt p\rceil\Big)+\gamma\tfrac{n}{\sqrt p}\lceil\log_2\sqrt p\rceil=\Theta(\alpha\log p+\beta n)$$
+  $$T_{\text{par}}=T_{\text{comp}}+T_{\text{comm}}=\Theta\!\Big(\frac{n\log n}{\sqrt p}+\alpha\log p+\beta n\Big)$$
+  <p>El término dominante de la comunicación es \(\beta(n-n/p)\) del <b>Scatter</b>: la raíz debe sacar \(n-n/p\) pares por su único puerto. Es la única colectiva cuyo volumen no baja con \(p\), la “fracción secuencial” de partir con la entrada en un solo nodo.</p>
+
+  <h3>Speedup, eficiencia y escalabilidad</h3>
+  $$S_{\text{comp}}(p)=\frac{T_s}{T_{\text{comp}}}=\frac{\sqrt p}{\lambda}\in[\sqrt p,\,2\sqrt p],\qquad E_{\text{comp}}=\frac{1}{\sqrt p\,\lambda}=\Theta\Big(\frac1{\sqrt p}\Big)$$
+  <div class="table-wrap"><table>
+    <thead><tr><th>Métrica</th><th>Resultado</th><th>Lectura</th></tr></thead>
+    <tbody>
+      <tr><td>Camino crítico</td><td>\(T_\infty=\Theta(\sqrt n\log n)\) con \(p=n\)</td><td>Paralelismo \(W/T_\infty = n\)</td></tr>
+      <tr><td>Costo \(p\,T_{\text{par}}\)</td><td>\(\Theta(n\sqrt p\log n+\alpha p\log p+\beta pn)\)</td><td>No es óptimo en costo frente a \(n\log n\)</td></tr>
+      <tr><td>Memoria por proceso</td><td>\(\Theta(n/\sqrt p)\)</td><td>Nunca guarda todo \(A\) (salvo \(P_{0,0}\))</td></tr>
+      <tr><td>Escalabilidad fuerte</td><td>\(T_{\text{comp}}\) cae como \(1/\sqrt p\)</td><td>Cuadruplicar \(p\) reduce el cómputo a la mitad</td></tr>
+      <tr><td>Débil, \(n/\sqrt p\) fijo</td><td>\(T_{\text{comp}}\) constante</td><td>El régimen en que mejor escala</td></tr>
+      <tr><td>Débil, \(n/p\) fijo</td><td>\(T_{\text{comp}}=\Theta(\sqrt p\log p)\)</td><td>No escala</td></tr>
+      <tr><td>Isoeficiencia</td><td><b>No existe</b></td><td>El overhead de redundancia es proporcional al trabajo útil: crecer \(n\) no lo compensa</td></tr>
+      <tr><td>FLOPs (operaciones/s)</td><td>Crecen \(\approx p\)</td><td>Pero las útiles solo \(\approx\sqrt p\): la diferencia es la redundancia</td></tr>
+      <tr><td>Velocidad (claves/s)</td><td>\(\approx\sqrt p/(2t_c\log_2 n)\), techo \(1/\beta\)</td><td>Limitada por el ancho de banda de la raíz</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="card calc">
+    <b style="font-family:var(--f-display)">Calculadora del modelo</b>
+    <div class="inrow" style="margin-top:10px">
+      <div><label for="cN">n (número de claves)</label><input id="cN" type="number" value="32000000" min="4"></div>
+      <div><label for="cP">p (cuadrado perfecto)</label>
+        <select id="cP"><option>1</option><option selected>4</option><option>9</option><option>16</option><option>25</option><option>36</option><option>64</option><option>100</option></select></div>
+    </div>
+    <div class="kv" id="cOut"></div>
+    <p style="font-size:.85rem;color:var(--muted);margin:10px 0 0">Compara el speedup de cómputo con el ideal \(p\): la brecha es exactamente el trabajo redundante.</p>
+  </div>
+
+  <h3>Predicciones a contrastar</h3>
+  <p>Del análisis salen seis hipótesis (H1–H6) que el paso 12 compara con las mediciones: speedup \(\sqrt p\le S_{\text{comp}}\le2\sqrt p\); la fracción de comunicación crece con \(p\); cómputo constante en débil con bloque fijo; FLOPs \(\approx p\); velocidad \(\approx\sqrt p\); Quicksort con ventaja de cómputo que crece como \(\sqrt p\).</p>
+</section>
+
+<!-- ============================ 8 ============================ -->
+<section class="step" id="implementacion">
+  <div class="kicker">Paso 8</div>
+  <h2>Implementación en C++/MPI</h2>
+
+  <h3>¿Por qué MPI y no OpenMP?</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Paradigma</th><th>Qué pasaría</th><th>Veredicto</th></tr></thead>
+    <tbody>
+      <tr><td><b>MPI</b></td><td>Correspondencia fase a fase: Gossip → <code>Allgather</code>, Broadcast → <code>Bcast</code>, Reduce → <code>Reduce</code>. Memoria \(O(n/\sqrt p)\), \(T_{\text{comm}}\) medible.</td><td class="ok">Elegido</td></tr>
+      <tr><td>OpenMP</td><td>Todos los hilos ven \(A\): Gossip y Broadcast desaparecen y no hay redundancia. Pero deja de ser el algoritmo del enunciado y no hay comunicación que medir.</td><td>Descartado como base</td></tr>
+      <tr><td>Híbrido</td><td>Grilla MPI + hilos que reparten Sort y búsquedas. Aprovecha núcleos sobrantes.</td><td class="mid">Implementado como mejora (paso 13)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><b>Por qué</b>
+    <p>No solo porque el enunciado lo pide: las fases Gossip, Broadcast y Reduce <em>son</em> colectivas de paso de mensajes, la grilla se mapea uno a uno a comunicadores de fila y columna, y medir cómputo y comunicación por separado solo tiene sentido con comunicación explícita.</p>
+  </div>
+
+  <h3>El único comando nuevo: <code>MPI_Comm_split</code></h3>
+  <pre><span class="c">// k = rango global; i = k / q (fila), j = k % q (columna)</span>
+<span class="m">MPI_Comm_split</span>(grid, i, j, &amp;row);   <span class="c">// misma fila; rango en row = j</span>
+<span class="m">MPI_Comm_split</span>(grid, j, i, &amp;col);   <span class="c">// misma columna; rango en col = i</span>
+<span class="m">MPI_Comm_split</span>(grid, i == j ? 0 : <span class="m">MPI_UNDEFINED</span>, i, &amp;diag); <span class="c">// solo diagonales</span></pre>
+  <div class="why"><b>Por qué es imprescindible</b>
+    <p>El algoritmo define sus fases sobre <em>subgrupos</em>: Gossip en la columna, Broadcast y Reduce en la fila, Output entre las diagonales. Usar \(j\) como clave de la fila hace que el rango de \(P_{i,j}\) en <code>row</code> sea \(j\), así la raíz \(i\) del Bcast/Reduce es exactamente la diagonal \(P_{i,i}\). La alternativa (Send/Recv a mano) perdería los algoritmos en árbol de las colectivas, que son los que modela el término \(\alpha\log\sqrt p\).</p>
+  </div>
+
+  <h3>Detalles que conviene recordar</h3>
+  <ul>
+    <li><b>Par y comparador:</b> <code>struct Par { int key; int idx; }</code> y <code>prec</code> implementa el orden lexicográfico, así <code>std::lower_bound</code> devuelve exactamente el conteo del ranking.</li>
+    <li><b>\(p\) no cuadrado:</b> se toma \(q=\lfloor\sqrt p\rfloor\) y los \(p-q^2\) procesos sobrantes quedan ociosos (fuera de <code>grid</code>).</li>
+    <li><b>Verificación:</b> el proceso 0 comprueba que \(\mathit{rank}\) sea permutación, que \(B\) sea no decreciente y que entre iguales los índices crezcan. Las claves se generan en \([0,n/2]\) para <em>forzar repeticiones</em> y ejercitar el desempate.</li>
+    <li><b>Instrumentación:</b> cada fase entre dos <code>MPI_Wtime</code>, se reporta el máximo entre procesos; un contador en <code>prec</code> mide comparaciones reales.</li>
+  </ul>
+</section>
+
+<!-- ============================ 9 ============================ -->
+<section class="step" id="betas">
+  <div class="kicker">Paso 9</div>
+  <h2>Las tres versiones beta</h2>
+  <div class="why"><b>Por qué una secuencia y no tres reescrituras</b>
+    <p>Cada beta cambia <b>una sola cosa</b> respecto de la anterior, para poder atribuir la diferencia medida a ese cambio. Las tres mueven exactamente los mismos datos; lo que se experimenta es <em>con qué colectivas</em> se mueven y cuántos mensajes hay en el camino crítico.</p>
+  </div>
+
+  <div class="timeline">
+    <div class="tl-item">
+      <h3>Beta 1 · Implementación funcional</h3>
+      <p>Pipeline completo y correcto con las variantes <code>v</code> (<code>Scatterv</code>, <code>Allgatherv</code>, <code>Gatherv</code>) y vectores <code>counts/displs</code> para admitir cualquier \(n\). Es la <b>referencia de corrección</b>: su verificación se reutiliza en las siguientes.</p>
+      <pre><span class="c">// Fase 4: Local ranking. r[t] = #{ y en B_j : y prec R[t] }</span>
+<span class="k">for</span> (<span class="k">int</span> t = 0; t &lt; b[i]; ++t)
+    r[t] = std::lower_bound(S.begin(), S.end(), R[t], prec) - S.begin();
+<span class="c">// Fase 5: Reduce. Suma por fila hacia la diagonal</span>
+<span class="m">MPI_Reduce</span>(r.data(), rk.data(), b[i], <span class="m">MPI_INT</span>, <span class="m">MPI_SUM</span>, i, row);</pre>
+    </div>
+
+    <div class="tl-item discard">
+      <h3>Beta 2 · Experimento sobre el Gossip</h3>
+      <p>Solo cambia la fase Gossip, implementada de dos formas: <b>V1</b> <code>Allgatherv</code> frente a <b>V2</b> Multi-Broadcast (\(q\) llamadas a <code>Bcast</code> en la columna, una por raíz).</p>
+      $$T^{(1)}=\alpha\lceil\log_2\sqrt p\rceil+\beta\Big(\tfrac{n}{\sqrt p}-\tfrac np\Big)\qquad T^{(2)}=\alpha\sqrt p\lceil\log_2\sqrt p\rceil+\beta\tfrac{n}{\sqrt p}\lceil\log_2\sqrt p\rceil$$
+      <div class="drop"><b>Por qué se descartó V2</b>
+        <p>V1 reenvía en cada ronda, en un solo mensaje, todos los fragmentos acumulados (alcanza los mínimos de rondas y volumen). En V2 cada fragmento viaja por su propio árbol: latencia \(\times\sqrt p\) y volumen \(\ge2\times\). Medido con \(n=16\times10^6\): empate con \(p=4\) (49,7 ms; con \(q=2\) ambas hacen un único intercambio), y con \(p=16\) gana <code>Allgatherv</code> por 17 % (114 vs 137 ms).</p>
+      </div>
+    </div>
+
+    <div class="tl-item final">
+      <h3>Beta 3 · Colectivas simples (versión final)</h3>
+      <p>Reemplaza las variantes <code>v</code> por <code>Scatter</code>, <code>Allgather</code> y <code>Gather</code> simples; pares como tipo derivado <code>MPI_Type_contiguous(2, MPI_INT)</code>; comunicador <code>diag</code> para el Gather; relleno con centinelas.</p>
+      <pre><span class="c">// n' = p*ceil(n/p): tamaños uniformes</span>
+<span class="k">const int</span> np = ((n + p - 1) / p) * p;
+<span class="k">for</span> (<span class="k">int</span> t = n; t &lt; np; ++t) A[t] = { INT_MAX, t };   <span class="c">// centinelas (+inf, t)</span>
+<span class="m">MPI_Scatter</span>(A.data(), m, MPI_PAR, C.data(), m, MPI_PAR, 0, grid);
+<span class="m">MPI_Allgather</span>(C.data(), m, MPI_PAR, S.data(), m, MPI_PAR, col);
+<span class="k">if</span> (i == j) R = S;
+<span class="m">MPI_Bcast</span>(R.data(), w, MPI_PAR, i, row);</pre>
+      <div class="why"><b>Por qué es la versión que se conserva</b>
+        <ul>
+          <li><b>Menor latencia, mismo volumen:</b> en MS-MPI (derivado de MPICH) <code>Scatterv/Gatherv</code> usan un algoritmo lineal, \(\alpha(p-1)\), porque los tamaños desiguales impiden el árbol; <code>Scatter/Gather</code> usan árbol binomial, \(\alpha\lceil\log_2p\rceil\). Ahorro: \(2\alpha((p-1)-\lceil\log_2 p\rceil)\), 22 latencias con \(p=16\).</li>
+          <li><b>Centinelas:</b> \((+\infty,t)\) son mayores que todo elemento real, así que no alteran ningún ranking real; reciben rankings \(\ge n\) y se descartan. Sobrecosto \(&lt;p\) elementos.</li>
+          <li>Queda en correspondencia <b>línea a línea</b> con el pseudocódigo.</li>
+          <li>Medido (\(n=16\times10^6\)): \(T_{\text{comm}}\) baja 16–54 % (p. ej. 0,864 → 0,662 s con \(p=16\)).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ 10 ============================ -->
+<section class="step" id="quicksort">
+  <div class="kicker">Paso 10</div>
+  <h2>Quicksort paralelo de referencia</h2>
+  <div class="what"><b>Qué se hizo</b>
+    <p>Para el requisito de comparar con Quicksort se implementó la versión \(n&gt;p\) del curso (\(p\) potencia de 2): Scatter, sort local, y \(\log_2 p\) niveles en los que el grupo elige un pivote, cada proceso intercambia con su pareja (<code>MPI_Sendrecv</code>) la mitad que no le corresponde, mezcla en \(O(n/p)\) y el grupo se parte en dos con <code>Comm_split</code>.</p>
+  </div>
+  <div class="why"><b>Por qué estas decisiones</b>
+    <ul>
+      <li><b>Mismo Scatter inicial</b>, mismo generador, semilla, tipo <code>Par</code> y comparador: ordena los mismos datos con el mismo criterio, comparación justa (y así también es estable).</li>
+      <li><b>Pivote = mediana de las medianas locales</b> (vía <code>Allgather</code>) en lugar de uno al azar: reparte mejor la carga.</li>
+      <li><b>Sendrecv sin suma de prefijos</b>: cada proceso tiene un único compañero por nivel.</li>
+    </ul>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Métrica</th><th>Ranking Sort (grilla)</th><th>Quicksort paralelo</th></tr></thead>
+    <tbody>
+      <tr><td>Trabajo</td><td>\(\Theta(n\sqrt p\log n)\), redundante</td><td>\(\Theta(n\log n)\), work-preserving</td></tr>
+      <tr><td>\(S_{\text{comp}}\)</td><td>\(\Theta(\sqrt p)\)</td><td>\(\Theta(p)\)</td></tr>
+      <tr><td>Latencia</td><td>\(\Theta(\log p)\) mensajes, patrón fijo</td><td>\(\Theta(\log^2 p)\), depende de los datos</td></tr>
+      <tr><td>Balance</td><td>Perfecto y determinista</td><td>Depende de los pivotes</td></tr>
+      <tr><td>Isoeficiencia</td><td>No existe</td><td>\(n=\Omega(p\log p)\)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================ 11 ============================ -->
+<section class="step" id="experimentos">
+  <div class="kicker">Paso 11</div>
+  <h2>Experimentos y resultados</h2>
+  <div class="what"><b>Diseño experimental</b>
+    <ul>
+      <li>AMD Ryzen 7 5800X (8 núcleos físicos, 16 hilos SMT), 16 GB, Windows 11, g++ <code>-O3</code>, MS-MPI.</li>
+      <li>5 repeticiones por configuración, se reporta la <b>mediana</b> (CV mediano 2,4 %). 370 ejecuciones, todas verificadas.</li>
+      <li>Fuerte: \(n\in\{1,4,16,32\}\times10^6\), \(p\in\{1,4,9,16\}\). Débil: bloque fijo \(n/\sqrt p=4\times10^6\) y \(n/p=2\times10^6\).</li>
+    </ul>
+  </div>
+  <div class="why"><b>Ojo con \(p&gt;8\)</b>
+    <p>Con \(p=9\) y \(16\) los procesos comparten núcleo físico y, sobre todo, el ancho de banda de memoria. Esa zona (franja gris en las figuras) se interpreta como un límite del equipo, no del algoritmo.</p>
+  </div>
+
+  <h3>Tiempos: el cómputo domina</h3>
+  <figure><img src="assets/figuras/res_tiempos.png" alt="Tiempo total, de cómputo y de comunicación de la Beta 3 frente a p para cuatro tamaños de n" loading="lazy"><figcaption>Beta 3: \(T_{\text{par}}\), \(T_{\text{comp}}\) y \(T_{\text{comm}}\) frente a \(p\).</figcaption></figure>
+  <div class="grid2">
+    <figure><img src="assets/figuras/res_fases.png" alt="Desglose por fase de la Beta 3 para n = 32 millones" loading="lazy"><figcaption>Desglose por fase, \(n=32\times10^6\).</figcaption></figure>
+    <div>
+      <ul>
+        <li>Con \(p=1\), el <b>Local ranking es el 83 %</b> del tiempo (10,46 de 12,62 s). Hace casi las mismas comparaciones que el Sort, pero cada búsqueda binaria salta por un arreglo de 256 MB y falla en caché.</li>
+        <li>\(T_{\text{comp}}\) baja casi a la mitad de \(p=1\) a \(4\) (12,56 → 6,82 s): el \(1/\sqrt p\) predicho.</li>
+        <li>\(T_{\text{comm}}/T_{\text{par}}\) sube 0,6 → 7,6 → 10,8 → 23 % (\(n=16\times10^6\)). La colectiva más cara es el Reduce.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Teoría frente a medición</h3>
+  <p>El contador de comparaciones queda 6–9 % por encima del modelo en todos los casos (<code>std::sort</code> es introsort, algo más que la cota de mergesort), y el crecimiento del trabajo \(W(p)/W(1)\) coincide con \(\sqrt p\,\lambda\) con error &lt; 2 %.</p>
+  <figure><img src="assets/figuras/res_teoria.png" alt="Tiempos medidos frente al modelo teórico calibrado" loading="lazy"><figcaption>Medido (puntos) frente al modelo calibrado (discontinuo). Con \(p=4\) el error es de −10 % a +3 %.</figcaption></figure>
+
+  <h3>Speedup y eficiencia</h3>
+  <figure><img src="assets/figuras/res_speedup.png" alt="Speedup y eficiencia de la Beta 3 y del Quicksort paralelo con referencias S=p, S=raíz de p y E=1/raíz de p" loading="lazy"><figcaption>La Beta 3 sigue \(1/\sqrt p\) hasta \(p=4\) (\(E\approx0{,}45\)). Quicksort: \(S=3{,}06\)–\(3{,}26\) con \(p=4\).</figcaption></figure>
+  <div class="table-wrap"><table>
+    <thead><tr><th class="n">\(n\)</th><th class="n">\(p\)</th><th class="n">\(\sqrt p/\lambda\) teoría</th><th class="n">\(S_{\text{comp}}\) operaciones</th><th class="n">\(S_{\text{comp}}\) tiempo</th><th class="n">\(S\) total</th></tr></thead>
+    <tbody>
+      <tr><td class="n">10⁶</td><td class="n">4</td><td class="n">2,10</td><td class="n">2,08</td><td class="n">2,00</td><td class="n">1,93</td></tr>
+      <tr><td class="n">10⁶</td><td class="n">16</td><td class="n">4,43</td><td class="n">4,38</td><td class="n">2,14</td><td class="n">2,07</td></tr>
+      <tr><td class="n">32·10⁶</td><td class="n">4</td><td class="n">2,08</td><td class="n">2,06</td><td class="n">1,84</td><td class="n">1,81</td></tr>
+      <tr><td class="n">32·10⁶</td><td class="n">16</td><td class="n">4,34</td><td class="n">4,34</td><td class="n">1,14</td><td class="n">1,13</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><b>Cómo leer esta tabla</b>
+    <p>En <b>operaciones</b> la teoría se cumple casi exacta incluso con \(p=16\). En <b>tiempo</b> se separa para \(p&gt;8\): las comparaciones por proceso siguen bajando, pero 16 búsquedas binarias simultáneas saturan la memoria. El modelo asume \(t_c\) constante y no puede capturarlo.</p>
+  </div>
+
+  <h3>FLOPs, velocidad y escalabilidad</h3>
+  <div class="grid2">
+    <figure><img src="assets/figuras/res_flops.png" alt="Trabajo total y máximo por proceso, y tasas de operaciones totales y útiles" loading="lazy"><figcaption>\(F/F_{\text{útil}}\approx\sqrt p\,\lambda\): la diferencia es el trabajo redundante.</figcaption></figure>
+    <figure><img src="assets/figuras/res_velocidad.png" alt="Velocidad en claves ordenadas por segundo frente a p" loading="lazy"><figcaption>Velocidad \(\times1{,}81\)–\(1{,}93\) con \(p=4\), cerca de \(\sqrt4=2\).</figcaption></figure>
+  </div>
+  <figure><img src="assets/figuras/res_debil.png" alt="Escalabilidad débil con bloque fijo y con datos por proceso fijos comparada con Quicksort" loading="lazy"><figcaption>Débil: con bloque fijo, ~194·10⁶ comparaciones por proceso para todo \(p\) (H3 se cumple en operaciones).</figcaption></figure>
+  <div class="grid2">
+    <figure><img src="assets/figuras/res_escala_n.png" alt="Tiempo paralelo frente a n con p fijo, Ranking Sort y Quicksort" loading="lazy"><figcaption>Con \(p=4\), \(n\times32\): Ranking Sort \(\times70\), Quicksort \(\times40\).</figcaption></figure>
+    <figure><img src="assets/figuras/res_betas.png" alt="Comunicación de la Beta 1 frente a la Beta 3 y tiempo del Gossip en las dos versiones de la Beta 2" loading="lazy"><figcaption>Beta 1 vs. Beta 3 (izquierda) y las dos versiones del Gossip (derecha).</figcaption></figure>
+  </div>
+</section>
+
+<!-- ============================ 12 ============================ -->
+<section class="step" id="hipotesis">
+  <div class="kicker">Paso 12</div>
+  <h2>Hipótesis frente a medición</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Hipótesis</th><th>Resultado</th><th>Evidencia</th></tr></thead>
+    <tbody>
+      <tr><td><b>H1</b> \(\sqrt p\le S_{\text{comp}}\le2\sqrt p\)</td><td class="mid">En operaciones sí; en tiempo solo \(p\le4\)</td><td>Error &lt; 2 % en operaciones; 1,76–2,00 con \(p=4\)</td></tr>
+      <tr><td><b>H2</b> \(T_{\text{comm}}/T_{\text{par}}\) crece con \(p\)</td><td class="ok">Se cumple</td><td>0,6 / 7,6 / 10,8 / 23 %</td></tr>
+      <tr><td><b>H3</b> débil: \(T_{\text{comp}}\) constante con bloque fijo</td><td class="mid">En operaciones sí; en tiempo no (memoria)</td><td>≈194·10⁶ comparaciones por proceso</td></tr>
+      <tr><td><b>H4</b> FLOPs \(\approx p\)</td><td class="ok">Hasta \(p=4\)</td><td>\(\times3{,}4\)–\(3{,}7\); \(F/F_{\text{útil}}=\sqrt p\lambda\) (≤ 3 %)</td></tr>
+      <tr><td><b>H5</b> velocidad \(\approx\sqrt p\)</td><td class="ok">Se cumple</td><td>\(\times1{,}81\)–\(1{,}93\); lejos del techo \(1/\beta\)</td></tr>
+      <tr><td><b>H6</b> Quicksort gana, brecha \(\sqrt p\)</td><td class="mid">Ventaja sí; convergencia al Scatter no se alcanza</td><td>Cociente \(\times1{,}85\)–\(2{,}06\) de \(p=1\) a \(4\)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><b>Conclusión general</b>
+    <p>El análisis predice la <b>forma</b> del comportamiento con mucha precisión cuando se mide en operaciones. Las desviaciones en tiempo con \(p&gt;8\) vienen de la saturación de memoria del equipo. Quicksort escala mejor por una razón estructural (\(\Theta(n\log n)\) vs. \(\Theta(n\sqrt p\log n)\) de trabajo); el Ranking Sort conserva el balance perfecto y un patrón de comunicación fijo.</p>
+  </div>
+</section>
+
+<!-- ============================ 13 ============================ -->
+<section class="step" id="mejoras">
+  <div class="kicker">Paso 13</div>
+  <h2>Mejoras</h2>
+  <h3>Medida: versión híbrida MPI + OpenMP</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th class="n">procesos</th><th class="n">hilos</th><th class="n">Sort (s)</th><th class="n">Ranking (s)</th><th class="n">\(T_{\text{par}}\) (s)</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td class="n">1</td><td class="n">1,070</td><td class="n">4,401</td><td class="n">5,525</td></tr>
+      <tr><td class="n">1</td><td class="n">8</td><td class="n">0,253</td><td class="n">0,754</td><td class="n"><b>1,036</b></td></tr>
+      <tr><td class="n">4</td><td class="n">1</td><td class="n">0,531</td><td class="n">2,765</td><td class="n">3,377</td></tr>
+      <tr><td class="n">4</td><td class="n">4</td><td class="n">0,280</td><td class="n">1,566</td><td class="n">1,895</td></tr>
+    </tbody>
+  </table></div>
+  <div class="why"><b>Por qué funciona tan bien</b>
+    <p>Con 1 proceso y 8 hilos: \(S=5{,}3\), 2,8 veces mejor que la mejor configuración solo MPI (2,93 s con \(p=9\)). Los hilos de un proceso <b>comparten</b> el bloque: el Sort se hace una vez y no \(\sqrt p\) veces, de modo que desaparece la redundancia del esquema en grilla.</p>
+  </div>
+  <h3>Propuestas</h3>
+  <ol>
+    <li><b>Ranking por mezcla:</b> ordenar también \(R\) y obtener todos los conteos con una mezcla lineal (acceso secuencial a memoria) en vez de \(n/\sqrt p\) búsquedas aleatorias, que causan el 80 % del tiempo por fallos de caché.</li>
+    <li><b>Ordenar antes del Gossip:</b> cada proceso ordena sus \(n/p\) y luego se mezclan \(\sqrt p\) secuencias ordenadas: menos Sort redundante.</li>
+    <li><b>Entrada distribuida:</b> generar/leer los datos en cada proceso elimina el \(\beta(n-n/p)\) del Scatter.</li>
+    <li><b>Clúster:</b> repetir con \(p\in\{9,\dots,36\}\) en núcleos físicos reales para separar algoritmo de saturación de memoria.</li>
+  </ol>
+</section>
+
+<!-- ============================ 14 ============================ -->
+<section class="step" id="repaso">
+  <div class="kicker">Paso 14</div>
+  <h2>Preguntas de repaso</h2>
+  <p>Intenta responder antes de abrir cada una.</p>
+
+  <details class="q"><summary>¿Por qué el ranking de cada elemento es su posición final?</summary>
+    <p>Porque cuenta exactamente cuántos elementos deben ir antes que él. Con desempate por índice, los rankings son una permutación de \(0..n-1\).</p></details>
+  <details class="q"><summary>¿Qué fase usa qué colectiva y sobre qué comunicador?</summary>
+    <p>Input: <code>Scatter</code> (grid). Gossip: <code>Allgather</code> (columna). Broadcast: <code>Bcast</code> desde \(P_{i,i}\) (fila). Reduce: <code>Reduce(+)</code> a \(P_{i,i}\) (fila). Output: <code>Gather</code> (diagonal).</p></details>
+  <details class="q"><summary>¿Por qué la raíz del Broadcast es el proceso diagonal?</summary>
+    <p>Tras el Gossip, \(P_{i,j}\) tiene \(B_j\). El único proceso de la fila \(i\) que tiene \(B_i\) es aquel con \(j=i\), es decir, \(P_{i,i}\).</p></details>
+  <details class="q"><summary>¿Por qué la suma de la fila \(i\) da el ranking global?</summary>
+    <p>Los bloques \(B_0,\dots,B_{q-1}\) particionan \(A\). \(P_{i,j}\) cuenta los menores dentro de \(B_j\); sumar sobre todos los \(j\) cuenta los menores en todo \(A\).</p></details>
+  <details class="q"><summary>¿Por qué el speedup es \(\sqrt p\) y no \(p\)?</summary>
+    <p>Porque el trabajo total crece como \(\sqrt p\): cada \(B_j\) se ordena \(\sqrt p\) veces y cada elemento se busca en \(\sqrt p\) bloques. \(S = T_s/(W/p) = p/(\sqrt p\lambda)=\sqrt p/\lambda\).</p></details>
+  <details class="q"><summary>¿Por qué no existe función de isoeficiencia?</summary>
+    <p>El overhead de redundancia \(W-T_s=T_s(\sqrt p\lambda-1)\) es proporcional al propio trabajo útil. Aumentar \(n\) no lo diluye: la eficiencia cae como \(1/\sqrt p\) para cualquier \(n\).</p></details>
+  <details class="q"><summary>¿Por qué es CREW?</summary>
+    <p>Gossip y Broadcast equivalen a lecturas concurrentes de un mismo bloque; nunca hay dos escrituras a la misma celda (el ranking es permutación).</p></details>
+  <details class="q"><summary>¿Qué cambió de la Beta 1 a la Beta 3 y por qué mejora?</summary>
+    <p>Colectivas <code>v</code> → simples. Mismo volumen, menor latencia: <code>Scatterv/Gatherv</code> son lineales (\(\alpha(p-1)\)) en MS-MPI y las simples usan árbol (\(\alpha\log p\)). El caso \(p\nmid n\) se resuelve con centinelas \((+\infty,t)\).</p></details>
+  <details class="q"><summary>¿Por qué se descartó el Multi-Broadcast de la Beta 2?</summary>
+    <p>Cada fragmento viaja por su propio árbol: latencia \(\times\sqrt p\) y volumen \(\ge2\times\). <code>Allgather</code> combina todo lo acumulado en un mensaje por ronda. Medido: 114 vs 137 ms con \(p=16\).</p></details>
+  <details class="q"><summary>¿Por qué el Local ranking tarda más que el Sort si comparan casi lo mismo?</summary>
+    <p>Las búsquedas binarias acceden a memoria de forma aleatoria sobre un arreglo grande y fallan en caché; el Sort recorre la memoria de forma más local.</p></details>
+  <details class="q"><summary>¿Por qué los resultados con \(p=9,16\) no siguen al modelo en tiempo?</summary>
+    <p>El equipo tiene 8 núcleos físicos: con más procesos se comparte núcleo (SMT) y ancho de banda de memoria. Las comparaciones sí siguen al modelo; es un límite del hardware.</p></details>
+  <details class="q"><summary>¿Qué ventajas conserva el Ranking Sort frente a Quicksort?</summary>
+    <p>Balance de carga perfecto y determinista (no depende de pivotes), patrón de comunicación fijo de 4 colectivas con \(\Theta(\log p)\) mensajes, y estabilidad.</p></details>
+  <details class="q"><summary>¿Por qué el híbrido MPI+OpenMP es tan rápido?</summary>
+    <p>Los hilos comparten memoria dentro del proceso: el bloque se ordena una sola vez y se elimina la redundancia \(\sqrt p\).</p></details>
+</section>
+
+<footer>
+  Basado en el informe final del Proyecto 4 (CS4052, Prof. José Fiestas, noviembre 2026). Código y datos: <a href="https://github.com/CesarPR30/Proyecto_Paralela_Ranking-Sort">Proyecto_Paralela_Ranking-Sort</a>.
+</footer>
+
+</main>
+</div>
+
+<script>
+/* ---------- tema ---------- */
+(function () {
+  var root = document.documentElement, KEY = 'repaso-theme';
+  try { var s = localStorage.getItem(KEY); if (s) root.setAttribute('data-theme', s); } catch (e) {}
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem(KEY, next); } catch (e) {}
+  });
+})();
+
+/* ---------- índice activo ---------- */
+(function () {
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        Object.values(links).forEach(function (l) { l.classList.remove('active'); });
+        if (links[e.target.id]) links[e.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-30% 0px -65% 0px' });
+  document.querySelectorAll('section.step').forEach(function (s) { io.observe(s); });
+})();
+
+/* ---------- calculadora de rankings ---------- */
+(function () {
+  var inp = document.getElementById('rkIn'), out = document.getElementById('rkOut'), bOut = document.getElementById('rkB');
+  function run() {
+    var A = inp.value.split(/[,\s]+/).filter(Boolean).map(Number).filter(function (x) { return !isNaN(x); }).slice(0, 20);
+    if (!A.length) { out.innerHTML = ''; bOut.textContent = ''; return; }
+    var rows = '', B = new Array(A.length);
+    A.forEach(function (x, i) {
+      var less = 0, eq = 0;
+      A.forEach(function (y, j) { if (y < x) less++; else if (y === x && j < i) eq++; });
+      var r = less + eq; B[r] = x;
+      rows += '<tr><td class="n">' + i + '</td><td class="n">' + x + '</td><td class="n">' + less + '</td><td class="n">' + eq + '</td><td class="n"><b>' + r + '</b></td></tr>';
+    });
+    out.innerHTML = '<table><thead><tr><th class="n">i</th><th class="n">A[i]</th><th class="n">menores</th><th class="n">iguales con índice menor</th><th class="n">rank[i]</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    bOut.innerHTML = 'B = [' + B.join(', ') + ']  ·  ' + (A.length * A.length) + ' comparaciones (n²)';
+  }
+  inp.addEventListener('input', run); run();
+})();
+
+/* ---------- calculadora del modelo ---------- */
+(function () {
+  var nI = document.getElementById('cN'), pI = document.getElementById('cP'), out = document.getElementById('cOut');
+  function lg(x) { return Math.ceil(Math.log2(Math.max(x, 1))); }
+  function fmt(x) {
+    if (x >= 1e9) return (x / 1e9).toFixed(2).replace('.', ',') + '·10⁹';
+    if (x >= 1e6) return (x / 1e6).toFixed(2).replace('.', ',') + '·10⁶';
+    return (Math.round(x * 100) / 100).toString().replace('.', ',');
+  }
+  function run() {
+    var n = Math.max(4, +nI.value || 4), p = +pI.value, sq = Math.sqrt(p);
+    if (p > n) { out.innerHTML = '<div><b>p &gt; n</b><small>El diseño exige p ≤ n</small></div>'; return; }
+    var blk = n / sq, Tc = blk * (2 * lg(blk) + 1), Ts = n * (2 * lg(n) + 1), W = p * Tc;
+    var lam = (2 * lg(blk) + 1) / (2 * lg(n) + 1), S = Ts / Tc, E = S / p;
+    out.innerHTML =
+      '<div><b>' + fmt(blk) + '</b><small>bloque n/√p por proceso</small></div>' +
+      '<div><b>' + fmt(Tc) + '</b><small>T_comp (comparaciones / proceso)</small></div>' +
+      '<div><b>' + fmt(W) + '</b><small>trabajo total W</small></div>' +
+      '<div><b>' + (W / Ts).toFixed(2).replace('.', ',') + '×</b><small>redundancia W/T_s = √p·λ</small></div>' +
+      '<div><b>' + S.toFixed(2).replace('.', ',') + '</b><small>S_comp (ideal: ' + p + ')</small></div>' +
+      '<div><b>' + E.toFixed(2).replace('.', ',') + '</b><small>E_comp (1/√p = ' + (1 / sq).toFixed(2).replace('.', ',') + ')</small></div>';
+  }
+  nI.addEventListener('input', run); pI.addEventListener('change', run); run();
+})();
+
+/* ---------- simulador del pipeline ---------- */
+(function () {
+  var Q = 3;
+  var ENUNCIADO = [['c','j'],['k','h'],['o','a'],['g','m'],['e','d'],['q','i'],['n','l'],['b','f'],['p','r']];
+  var input = ENUNCIADO.map(function (x) { return x.slice(); });
+  var phase = 0, st;
+
+  var PH = [
+    { name: 'Input', mpi: 'MPI_Scatter(A → C, raíz P00, grid)',
+      what: 'El proceso 0 tiene las 18 letras y reparte n/p = 2 a cada proceso.',
+      why: 'La entrada parte de un solo nodo. Es la única colectiva sobre los p procesos y su volumen β(n − n/p) no baja con p: es el piso de la comunicación.' },
+    { name: 'Gossip', mpi: 'MPI_Allgather(C → S, comunicador col)',
+      what: 'Cada columna j junta los fragmentos de sus 3 procesos: todos quedan con el bloque B_j de n/√p = 6 letras (flechas verticales en la figura).',
+      why: 'P_ij va a comparar contra B_j, así que necesita el bloque entero de su columna. Allgather lo logra en ⌈log₂√p⌉ rondas reenviando todo lo acumulado en un mensaje.' },
+    { name: 'Broadcast', mpi: 'MPI_Bcast(R, raíz i = P_ii, comunicador row)',
+      what: 'En cada fila i, el proceso diagonal P_ii envía su S (que es B_i) a toda la fila. Ahora cada proceso tiene S = B_j (arriba) y R = B_i (abajo).',
+      why: 'R son los elementos “a rankear” de la fila. El único proceso de la fila i que ya tiene B_i tras el Gossip es la diagonal (j = i); por eso es la raíz.' },
+    { name: 'Sort', mpi: 'std::sort(S, prec)  — local',
+      what: 'Cada proceso ordena su bloque de columna S. R no cambia.',
+      why: 'Con S ordenado, contar “cuántos son menores que x” es una búsqueda binaria de O(log) en vez de recorrer las 6 celdas. Ojo: cada B_j se ordena √p veces (una por proceso de la columna): es la redundancia.' },
+    { name: 'Local ranking', mpi: 'r[t] = lower_bound(S, R[t], prec)  — local',
+      what: 'Para cada letra de R, el proceso cuenta cuántas letras de su S son estrictamente menores. Fila de números = conteos parciales.',
+      why: 'Cada P_ij resuelve su bloque (B_i contra B_j) de la matriz de comparaciones. lower_bound con el comparador prec devuelve exactamente ese conteo.' },
+    { name: 'Reduce', mpi: 'MPI_Reduce(r → Rk, MPI_SUM, raíz P_ii, row)',
+      what: 'Se suman los conteos de cada fila en el proceso diagonal. El resultado (naranja) es el ranking global de cada letra de B_i.',
+      why: 'La fila i cubre las comparaciones de B_i contra todos los bloques B_0..B_{q−1}, que particionan A. Sumarlas da #menores en todo A = posición final.' },
+    { name: 'Output', mpi: 'MPI_Gather((Rk, clave) → P00, comunicador diag)',
+      what: 'Las 3 diagonales envían (ranking, letra) a P00, que hace B[rank] ← letra.',
+      why: 'No es un ordenamiento: el ranking ya es la posición. Es post-procesamiento O(n), se mide aparte y no entra en el speedup.' }
+  ];
+
+  function colorOf(ch) { return st.origin[ch]; }
+  function compute() {
+    var origin = {};
+    input.forEach(function (pair, k) { pair.forEach(function (ch) { origin[ch] = k % Q; }); });
+    var S = [], R = [], Ss = [], r = [], Rk = [];
+    for (var i = 0; i < Q; i++) { S[i] = []; R[i] = []; Ss[i] = []; r[i] = []; }
+    for (var i = 0; i < Q; i++) for (var j = 0; j < Q; j++) {
+      var col = [];
+      for (var ii = 0; ii < Q; ii++) col = col.concat(input[ii * Q + j]);
+      S[i][j] = col;
+    }
+    for (var i = 0; i < Q; i++) for (var j = 0; j < Q; j++) {
+      R[i][j] = S[i][i].slice();
+      Ss[i][j] = S[i][j].slice().sort();
+      r[i][j] = R[i][j].map(function (x) { return Ss[i][j].filter(function (y) { return y < x; }).length; });
+    }
+    for (var i = 0; i < Q; i++) {
+      Rk[i] = R[i][i].map(function (_, t) { var s = 0; for (var j = 0; j < Q; j++) s += r[i][j][t]; return s; });
+    }
+    st = { origin: origin, S: S, R: R, Ss: Ss, r: r, Rk: Rk };
+  }
+  function letters(arr) {
+    return arr.map(function (ch) { return '<span class="l' + colorOf(ch) + '">' + ch + '</span>'; }).join(' ');
+  }
+  function row(label, html, cls) {
+    return '<div class="row lbl ' + (cls || '') + '" data-l="' + label + '">' + html + '</div>';
+  }
+  function render() {
+    var g = '';
+    for (var i = 0; i < Q; i++) for (var j = 0; j < Q; j++) {
+      var k = i * Q + j, diag = i === j, cls = 'pcell' + (diag ? ' diag' : '');
+      var body = '', flow = '';
+      if (phase === 0) { body = row('C', letters(input[k]), 'new'); if (k === 0) flow = 'raíz'; }
+      else if (phase === 1) { body = row('S', letters(st.S[i][j]), 'new'); flow = '↕ col ' + j; }
+      else if (phase === 2) { body = row('S', letters(st.S[i][j])) + row('R', letters(st.R[i][j]), 'new'); flow = diag ? 'raíz →' : '← fila ' + i; }
+      else if (phase === 3) { body = row('S', letters(st.Ss[i][j]), 'new') + row('R', letters(st.R[i][j])); }
+      else if (phase === 4) { body = row('S', letters(st.Ss[i][j])) + row('R', letters(st.R[i][j])) + row('r', st.r[i][j].join(' '), 'nums new'); }
+      else if (phase === 5) {
+        if (diag) { body = row('R', letters(st.R[i][j])) + row('Σ', st.Rk[i].join(' '), 'big new'); flow = '← Σ fila'; }
+        else { cls += ' dim'; body = row('r', st.r[i][j].join(' '), 'nums'); }
+      } else {
+        if (diag) { body = row('R', letters(st.R[i][j])) + row('Σ', st.Rk[i].join(' '), 'big'); flow = '→ P00'; }
+        else { cls += ' dim'; }
+      }
+      g += '<div class="' + cls + '"><div class="pid"><span>P' + i + ',' + j + '</span><span class="flow">' + flow + '</span></div>' + body + '</div>';
+    }
+    document.getElementById('simGrid').innerHTML = g;
+
+    var out = '';
+    if (phase === 6) {
+      var B = [];
+      for (var i = 0; i < Q; i++) st.R[i][i].forEach(function (ch, t) { B[st.Rk[i][t]] = ch; });
+      out = B.map(function (ch, idx) { return '<span><span class="l' + colorOf(ch) + '">' + ch + '</span><small>' + idx + '</small></span>'; }).join('');
+    }
+    document.getElementById('simOut').innerHTML = out;
+
+    var P = PH[phase];
+    document.getElementById('simText').innerHTML =
+      '<h4>Fase ' + phase + ': ' + P.name + '</h4><div class="mpi">' + P.mpi + '</div>' +
+      '<p><b>Qué pasa.</b> ' + P.what + '</p><p><b>Por qué.</b> ' + P.why + '</p>' +
+      (phase === 6 ? '<p style="color:var(--green)"><b>✓ Ordenado.</b> Cada letra cayó en su posición 0-indexada.</p>' : '');
+
+    document.querySelectorAll('.phase-pill').forEach(function (b, idx) { b.classList.toggle('on', idx === phase); });
+    document.getElementById('simPrev').disabled = phase === 0;
+    document.getElementById('simNext').disabled = phase === PH.length - 1;
+  }
+  var pills = document.getElementById('simPhases');
+  PH.forEach(function (P, idx) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'phase-pill'; b.textContent = idx + ' · ' + P.name;
+    b.addEventListener('click', function () { phase = idx; render(); });
+    pills.appendChild(b);
+  });
+  document.getElementById('simPrev').addEventListener('click', function () { if (phase > 0) { phase--; render(); } });
+  document.getElementById('simNext').addEventListener('click', function () { if (phase < PH.length - 1) { phase++; render(); } });
+  document.getElementById('simShuffle').addEventListener('click', function () {
+    var L = 'abcdefghijklmnopqr'.split('');
+    for (var i = L.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = L[i]; L[i] = L[j]; L[j] = t; }
+    input = []; for (var k = 0; k < 9; k++) input.push([L[2 * k], L[2 * k + 1]]);
+    phase = 0; compute(); render();
+  });
+  document.getElementById('simReset').addEventListener('click', function () {
+    input = ENUNCIADO.map(function (x) { return x.slice(); }); phase = 0; compute(); render();
+  });
+  compute(); render();
+})();
+
+/* ---------- KaTeX ---------- */
+window.addEventListener('load', function () {
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [{ left: '$$', right: '$$', display: true }, { left: '\\(', right: '\\)', display: false }],
+      throwOnError: false
+    });
+  }
+});
+</script>
+</body>
+</html>
