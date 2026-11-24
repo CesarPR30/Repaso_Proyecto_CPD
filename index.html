@@ -164,7 +164,7 @@ details.q[open] summary { margin-bottom: 6px; }
 footer { color: var(--muted); font-size: .85rem; padding-top: 30px; max-width: 820px; }
 
 @media (max-width: 960px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
   nav.toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; }
   .toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
   .toc a { padding: 4px 8px; font-size: .82rem; }
@@ -176,6 +176,35 @@ footer { color: var(--muted); font-size: .85rem; padding-top: 30px; max-width: 8
   .pcell .row { font-size: .72rem; letter-spacing: 0; }
   .pgrid { gap: 5px; }
 }
+/* VIDEOS-CSS:INICIO */
+/* ---------- videos y audios ---------- */
+.player { display: grid; gap: 12px; }
+.player .now { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.player .now b { font-family: var(--f-display); font-size: 1.15rem; }
+.player .now span { color: var(--muted); font-size: .9rem; }
+.player audio { width: 100%; }
+.tracks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tracks button { width: 100%; text-align: left; display: flex; justify-content: space-between; gap: 10px;
+  background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px; font: inherit; cursor: pointer; }
+.tracks button[aria-current="true"] { border-color: var(--blue); background: var(--blue-soft); }
+.tracks button small { color: var(--muted); white-space: nowrap; }
+.hint { color: var(--muted); font-size: .9rem; margin: 0; }
+.vids { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.vid { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.vid video { width: 100%; display: block; background: #000; aspect-ratio: 16 / 9; }
+.vid figcaption { padding: 12px 14px; }
+.vid figcaption b { font-family: var(--f-display); }
+.vid figcaption p { margin: 4px 0 6px; color: var(--muted); font-size: .92rem; }
+.vid figcaption a { font-size: .88rem; }
+.qa-group { font-family: var(--f-display); font-size: 1.1rem; margin: 26px 0 6px; }
+@media (max-width: 760px) { .vids { grid-template-columns: 1fr; } }
+/* VIDEOS-CSS:FIN */
+/* evita desbordes horizontales en el celular */
+pre, table, .katex-display { max-width: 100%; overflow-x: auto; }
+img, video, svg { max-width: 100%; }
+
+
 </style>
 </head>
 <body>
@@ -186,6 +215,7 @@ footer { color: var(--muted); font-size: .85rem; padding-top: 30px; max-width: 8
   <div class="sub">CS4052 · Repaso del proyecto</div>
   <ol>
     <li><a href="#inicio">Resumen</a></li>
+    <li><a href="#videos">Videos y audios</a></li>
     <li><a href="#problema">El problema</a></li>
     <li><a href="#paralelismo">¿Por qué paralelizar?</a></li>
     <li><a href="#intento1">Primer intento</a></li>
@@ -200,6 +230,7 @@ footer { color: var(--muted); font-size: .85rem; padding-top: 30px; max-width: 8
     <li><a href="#hipotesis">Hipótesis vs. medición</a></li>
     <li><a href="#mejoras">Mejoras</a></li>
     <li><a href="#repaso">Preguntas de repaso</a></li>
+    <li><a href="#qa">Preguntas y respuestas</a></li>
   </ol>
   <button class="theme-btn" id="themeBtn" type="button">Cambiar tema</button>
 </nav>
@@ -223,6 +254,57 @@ footer { color: var(--muted); font-size: .85rem; padding-top: 30px; max-width: 8
   </div>
   <p>Usa el índice de la izquierda para saltar entre pasos. El paso 5 tiene un simulador que reproduce la figura del enunciado fase por fase.</p>
 </section>
+
+<!-- VIDEOS:INICIO -->
+<section class="step" id="videos">
+  <div class="kicker">Material de repaso</div>
+  <h2>Videos y audios</h2>
+  <p class="lead">Cuatro videos narrados. Empieza por el resumen; las preguntas y respuestas sirven para practicar antes de la evaluación.</p>
+
+  <div class="card player" id="player">
+    <div class="now"><b id="plTitle">Escuchar con la pantalla bloqueada</b><span id="plInfo">Elige una pista</span></div>
+    <audio id="plAudio" controls preload="none"></audio>
+    <ol class="tracks" id="plTracks">
+      <li><button type="button" data-i="0"><span>1. Resumen completo</span><small>7:45</small></button></li>
+      <li><button type="button" data-i="1"><span>2. Preguntas y respuestas</span><small>11:50</small></button></li>
+      <li><button type="button" data-i="2"><span>3. Explicación detallada</span><small>18:01</small></button></li>
+      <li><button type="button" data-i="3"><span>4. El informe a fondo</span><small>17:07</small></button></li>
+    </ol>
+    <p class="hint">Los navegadores del celular pausan los <em>videos</em> al bloquear la pantalla, pero el <em>audio</em> sigue sonando y se controla desde la pantalla de bloqueo. Al terminar una pista pasa sola a la siguiente, y recuerda dónde te quedaste.</p>
+  </div>
+
+  <div class="vids">
+    <figure class="vid">
+      <video controls playsinline preload="none" poster="media/posters/resumen.jpg" src="media/videos/resumen.mp4"></video>
+      <figcaption><b>Resumen completo</b> · 7:45
+        <p>Todo el proyecto en ~8 minutos: idea, reparto, seis fases, complejidad, betas y resultados.</p>
+        <a href="media/videos/resumen.mp4" download>Descargar video (15 MB)</a> ·
+        <a href="media/audio/resumen.m4a" download>solo audio (6 MB)</a></figcaption>
+    </figure>
+    <figure class="vid">
+      <video controls playsinline preload="none" poster="media/posters/preguntas.jpg" src="media/videos/preguntas.mp4"></video>
+      <figcaption><b>Preguntas y respuestas</b> · 11:50
+        <p>20 preguntas de análisis: el porqué de cada decisión y de dónde sale cada fórmula.</p>
+        <a href="media/videos/preguntas.mp4" download>Descargar video (19 MB)</a> ·
+        <a href="media/audio/preguntas.m4a" download>solo audio (10 MB)</a></figcaption>
+    </figure>
+    <figure class="vid">
+      <video controls playsinline preload="none" poster="media/posters/explicativo.jpg" src="media/videos/explicativo.mp4"></video>
+      <figcaption><b>Explicación detallada</b> · 18:01
+        <p>Recorrido completo con animaciones del pipeline y todas las gráficas de resultados.</p>
+        <a href="media/videos/explicativo.mp4" download>Descargar video (34 MB)</a> ·
+        <a href="media/audio/explicativo.m4a" download>solo audio (15 MB)</a></figcaption>
+    </figure>
+    <figure class="vid">
+      <video controls playsinline preload="none" poster="media/posters/informe.jpg" src="media/videos/informe.mp4"></video>
+      <figcaption><b>El informe a fondo</b> · 17:07
+        <p>Sección por sección: reparto de datos, introsort, complejidad, escalabilidad y procesos ociosos.</p>
+        <a href="media/videos/informe.mp4" download>Descargar video (33 MB)</a> ·
+        <a href="media/audio/informe.m4a" download>solo audio (15 MB)</a></figcaption>
+    </figure>
+  </div>
+</section>
+<!-- VIDEOS:FIN -->
 
 <!-- ============================ 1 ============================ -->
 <section class="step" id="problema">
@@ -659,6 +741,61 @@ footer { color: var(--muted); font-size: .85rem; padding-top: 30px; max-width: 8
     <p>Los hilos comparten memoria dentro del proceso: el bloque se ordena una sola vez y se elimina la redundancia \(\sqrt p\).</p></details>
 </section>
 
+<!-- QA:INICIO -->
+<section class="step" id="qa">
+  <div class="kicker">Análisis</div>
+  <h2>Preguntas y respuestas</h2>
+  <p class="lead">Las preguntas más importantes sobre el porqué de cada decisión y de cada fórmula. Intenta responder antes de abrir cada una. También están narradas en el video <a href="#videos">Preguntas y respuestas</a>.</p>
+  <h3 class="qa-group">Diseño del algoritmo</h3>
+  <details class="q"><summary>1. ¿Por qué el ranking de un elemento es su posición final, y por qué se desempata por índice?</summary>
+    <p>El ranking cuenta cuántos elementos deben ir antes: \(\mathit{rank}[i]=\#\{j:A[j]<A[i]\}+\#\{j:A[j]=A[i]\wedge j<i\}\). Si \(k\) elementos van antes, el elemento ocupa la posición \(k\) (contando desde 0). Sin desempate, dos claves iguales tendrían el mismo ranking y chocarían en la misma posición; con el índice original como segundo criterio, los rankings forman una permutación de \(0..n-1\) y el orden es estable.</p></details>
+  <details class="q"><summary>2. ¿Por qué se usa una grilla q×q y p tiene que ser un cuadrado perfecto?</summary>
+    <p>La matriz de comparaciones \(n\times n\) se parte en \(q\times q\) bloques y hace falta un proceso por cada par de bloques \((B_i,B_j)\): \(q^2\) procesos. Si \(p\) no es cuadrado perfecto se usa \(q=\lfloor\sqrt p\rfloor\) y los \(p-q^2\) procesos sobrantes quedan ociosos (con \(p=8\) solo trabajan 4). Por eso las mediciones usan \(p\in\{1,4,9,16\}\).</p></details>
+  <details class="q"><summary>3. ¿Por qué la raíz del Broadcast y del Reduce es el proceso diagonal?</summary>
+    <p>Tras el Gossip, \(P_{i,j}\) tiene \(B_j\), el bloque de su columna. En la fila \(i\), el único proceso que tiene \(B_i\) es el de la columna \(j=i\): \(P_{i,i}\); por eso es quien lo difunde a su fila. En el Reduce se usa la misma raíz para que el ranking global de \(B_i\) quede en el proceso que ya tiene las claves de \(B_i\), listo para el Gather final.</p></details>
+  <details class="q"><summary>4. ¿Por qué ordenar y hacer búsqueda binaria en vez de comparar celda por celda?</summary>
+    <p>Comparar cada elemento de \(B_i\) con cada uno de \(B_j\) cuesta \((n/q)^2\). Si \(B_j\) está ordenado, la posición donde caería un elemento (<code>lower_bound</code>) es justamente cuántos elementos de \(B_j\) son menores, y se encuentra con \(\lceil\log_2(n/q)\rceil+1\) comparaciones en lugar de \(n/q\). El bloque pasa a costar \(\Theta\bigl(\tfrac nq\log\tfrac nq\bigr)\).</p></details>
+  <h3 class="qa-group">Complejidad y fórmulas</h3>
+  <details class="q"><summary>5. ¿De dónde sale T_comp = (n/√p)·(2⌈log₂(n/√p)⌉ + 1)?</summary>
+    <p>Cada proceso maneja bloques de \(x=n/\sqrt p\). Ordenar \(B_j\) cuesta a lo más \(x\lceil\log_2x\rceil\) comparaciones (cota de mergesort) y las \(x\) búsquedas binarias \(x(\lceil\log_2x\rceil+1)\). Sumando, \(T_{comp}=x(2\lceil\log_2x\rceil+1)\): el 2 viene de sort + búsquedas y el +1 de la comparación extra de cada búsqueda. Como el tamaño del bloque no depende de los valores, todos los procesos hacen exactamente lo mismo: balance perfecto. (<code>std::sort</code> hace en la práctica 6–9 % más comparaciones que la cota.)</p></details>
+  <details class="q"><summary>6. ¿Por qué el tiempo secuencial es Tₛ = n(2⌈log₂n⌉+1) y no n²?</summary>
+    <p>La referencia secuencial es el mismo algoritmo con \(p=1\): las colectivas no hacen nada y el bloque es todo el arreglo (\(x=n\)). Queda «ordenar y buscar»: \(T_s=n(2\lceil\log_2n\rceil+1)=\Theta(n\log n)\). Las \(n^2\) comparaciones son del Ranking Sort clásico; el speedup contra él (\(\approx1{,}8\cdot10^4\)) mide sobre todo el cambio de algoritmo, no el paralelismo.</p></details>
+  <details class="q"><summary>7. ¿Qué es λ y por qué aparece en las fórmulas?</summary>
+    <p>\(\lambda(n,p)=\dfrac{2\lceil\log_2(n/\sqrt p)\rceil+1}{2\lceil\log_2n\rceil+1}\) es el cociente entre el costo por elemento en un bloque de \(n/\sqrt p\) y en el arreglo completo. Como el bloque es más chico su logaritmo es menor: \(\lambda\le1\) y \(\lambda\to1\) cuando \(n\gg p\) (con \(n=32\cdot10^6\), entre 0,92 y 0,96). Aparece al comparar con el secuencial: \(W/T_s=\sqrt p\,\lambda\) y \(S_{comp}=\sqrt p/\lambda\).</p></details>
+  <details class="q"><summary>8. ¿Por qué el trabajo es W = Θ(n√p log n) y el algoritmo no es work-preserving?</summary>
+    <p>\(W=p\,T_{comp}=n\sqrt p\,(2\lceil\log_2\tfrac{n}{\sqrt p}\rceil+1)\). Crece con \(p\) porque cada \(B_j\) se ordena en los \(\sqrt p\) procesos de su columna y cada elemento se busca en los \(\sqrt p\) bloques de su fila. Un algoritmo work-preserving tendría \(W=\Theta(T_s)\); aquí \(W/T_s=\sqrt p\,\lambda\). La redundancia es inherente al esquema del enunciado, no un error de implementación.</p></details>
+  <h3 class="qa-group">Speedup y eficiencia</h3>
+  <details class="q"><summary>9. ¿Por qué el speedup es √p y no p?</summary>
+    <p>\(S_{comp}=\dfrac{T_s}{T_{comp}}=\dfrac{T_s}{W/p}=\dfrac{p}{\sqrt p\,\lambda}=\dfrac{\sqrt p}{\lambda}\). Los \(p\) procesos trabajan todo el tiempo, pero hacen \(\sqrt p\) veces más de lo necesario. Con comunicación es aún menor: \(S=S_{comp}\cdot T_{comp}/T_{par}\le S_{comp}\). Medido con \(p=4\): \(S\approx1{,}8\)–\(1{,}9\).</p></details>
+  <details class="q"><summary>10. ¿Qué significa la descomposición E = (Tₛ/W)·(T_comp/T_par)?</summary>
+    <p>Es la eficiencia \(E=T_s/(p\,T_{par})\) separada usando \(W=p\,T_{comp}\). El primer factor, \(T_s/W=1/(\sqrt p\,\lambda)\), es la redundancia del algoritmo: no depende de la red ni del código. El segundo, \(T_{comp}/T_{par}\), es la fracción del tiempo dedicada a calcular y mide el peso de la comunicación. Como el primero cae como \(1/\sqrt p\), \(E=\Theta(1/\sqrt p)\).</p></details>
+  <h3 class="qa-group">Comunicación</h3>
+  <details class="q"><summary>11. ¿Por qué el Scatter cuesta β(n − n/p) y es lo que no escala?</summary>
+    <p>Con árbol binomial el Scatter tiene \(\lceil\log_2p\rceil\) rondas, lo que solo reduce la latencia; pero la raíz debe sacar por su único puerto todos los datos que no se queda: \((p-1)n/p\) pares. \(T_{scatter}=\alpha\lceil\log_2p\rceil+\beta(p-1)\tfrac np\). Ese volumen no baja con \(p\): es la parte secuencial de empezar con la entrada en un solo proceso, y pone un techo al speedup, \(S\le T_s/(\beta(n-n/p))\). Leer la entrada ya distribuida lo eliminaría.</p></details>
+  <details class="q"><summary>12. ¿Por qué el Broadcast y el Reduce llevan el factor ⌈log₂√p⌉ multiplicando a β?</summary>
+    <p>Se modelan con árbol binomial sobre la fila (\(\sqrt p\) procesos) y, a diferencia del Scatter, en cada ronda se retransmite el bloque completo de \(n/\sqrt p\) elementos: \(T_{bcast}=\lceil\log_2\sqrt p\rceil(\alpha+\beta\,n/\sqrt p)\). El Reduce además suma los vectores en cada ronda: \(\lceil\log_2\sqrt p\rceil(\alpha+(\beta+\gamma)\,n/\sqrt p)\). Fue la colectiva más cara medida: 1,41 s con \(p=16\) y \(n=32\cdot10^6\).</p></details>
+  <h3 class="qa-group">Escalabilidad, PRAM y métricas</h3>
+  <details class="q"><summary>13. ¿Por qué no existe función de isoeficiencia?</summary>
+    <p>El overhead es \(T_0=p\,T_{par}-T_s=T_s(\sqrt p\,\lambda-1)+p\,T_{comm}\). Mantener \(E\) constante exige \(T_s=K\,T_0\), pero el primer término ya es proporcional a \(T_s\): habría que cumplir \(\sqrt p\,\lambda\le1+1/K\), imposible cuando \(p\) crece, para cualquier \(n\). Aumentar \(n\) no diluye la redundancia. Frente al Ranking Sort secuencial \(n^2\), en cambio, basta \(n=\Theta(p)\).</p></details>
+  <details class="q"><summary>14. ¿Por qué el modelo PRAM es CREW?</summary>
+    <p>En el Gossip y el Broadcast, \(\sqrt p\) procesadores leen el mismo bloque a la vez: lectura concurrente (CR). Sort y búsquedas son locales; el Reduce en árbol tiene accesos exclusivos; y en la salida, como el ranking es una permutación, ninguna celda recibe dos escrituras: escritura exclusiva (EW). EREW no alcanza y CRCW sería innecesariamente potente.</p></details>
+  <details class="q"><summary>15. ¿Por qué las operaciones por segundo crecen como p si el speedup crece como √p?</summary>
+    <p>\(F=W/T_{par}\) cuenta todas las comparaciones, también las redundantes: los \(p\) procesos comparan todo el tiempo, así que crece \(\approx p\) mientras domine el cómputo. \(F_{útil}=T_s/T_{par}\) solo cuenta las necesarias y crece como \(S\). Su cociente es \(W/T_s=\sqrt p\,\lambda\): medido 1,94 · 2,85 · 3,72 con \(p=4,9,16\). La diferencia entre ambas curvas es exactamente el trabajo redundante.</p></details>
+  <h3 class="qa-group">Implementación y resultados</h3>
+  <details class="q"><summary>16. ¿Por qué la Beta 3 mejora a la Beta 1, y por qué se descartó el Multi-Broadcast?</summary>
+    <p>Beta 1 → Beta 3: mismo volumen, menor latencia. En MS-MPI, <code>Scatterv</code>/<code>Gatherv</code> son lineales (\(\alpha(p-1)\)) y <code>Scatter</code>/<code>Gather</code> usan árbol (\(\alpha\lceil\log_2p\rceil\)): ahorro \(2\alpha((p-1)-\lceil\log_2p\rceil)\), 22 latencias con \(p=16\). Medido: \(T_{comm}\) baja 16–54 %. Beta 2: en el Multi-Broadcast cada fragmento viaja por su propio árbol (latencia \(\times\sqrt p\), volumen \(\ge2\times\)), mientras que <code>Allgather</code> envía lo acumulado en un mensaje por ronda: 114 vs 137 ms con \(p=16\).</p></details>
+  <details class="q"><summary>17. ¿Por qué con 9 y 16 procesos el tiempo no baja como dice el modelo?</summary>
+    <p>Las comparaciones por proceso sí bajan como \(1/\sqrt p\) (el contador coincide con el modelo con error < 2 %). Pero el equipo tiene 8 núcleos físicos: con \(p>8\) los procesos comparten núcleo (SMT) y, sobre todo, el ancho de banda de memoria, con búsquedas binarias que fallan en caché. El modelo supone que el costo de una comparación \(t_c\) no depende de \(p\); aquí deja de cumplirse. Es un límite del hardware, no del algoritmo.</p></details>
+  <details class="q"><summary>18. ¿Por qué el post-procesamiento no se incluye en T_par?</summary>
+    <p>Al terminar el Reduce el problema ya está resuelto: cada diagonal conoce la posición final de sus elementos. El Gather y la colocación \(B[\mathit{rank}]\leftarrow\) clave solo entregan el resultado, sin ordenar, y los hace un subconjunto (\(\sqrt p\) procesos y luego solo \(P_{0,0}\)), así que no bajan con \(p\): \(T_{post}=\alpha\lceil\log_2\sqrt p\rceil+\beta(n-n/\sqrt p)+n\). Se reporta aparte (0,55–0,74 s para \(n=32\cdot10^6\)) para no distorsionar speedup y eficiencia.</p></details>
+  <h3 class="qa-group">Comparación con otras versiones</h3>
+  <details class="q"><summary>19. ¿Por qué Quicksort paralelo es más rápido, y qué ventajas conserva el Ranking Sort?</summary>
+    <p>Quicksort es work-preserving: \(W=\Theta(n\log n)\), cada proceso ordena solo \(n/p\) elementos y su eficiencia de cómputo es \(\Theta(1)\); el cociente de cómputo RS/QS crece como \(\sqrt p\) (medido: se duplica de \(p=1\) a \(p=4\)). El Ranking Sort conserva un balance de carga perfecto y determinista (no depende de pivotes), un patrón fijo de 4 colectivas con \(\Theta(\log p)\) mensajes frente a \(\Theta(\log^2p)\), y estabilidad.</p></details>
+  <details class="q"><summary>20. ¿Por qué el híbrido MPI+OpenMP es la versión más rápida del Ranking Sort?</summary>
+    <p>Los hilos de un proceso comparten memoria: el bloque se ordena una sola vez y las búsquedas binarias se reparten entre hilos, así que desaparece la redundancia \(\sqrt p\) de la grilla. Con 1 proceso y 8 hilos, \(T_{par}\) bajó de 5,52 a 1,04 s (\(S=5{,}3\)), 2,8 veces mejor que la mejor configuración solo MPI (2,93 s con \(p=9\)). El Quicksort paralelo sigue siendo más rápido (≈ 0,29 s con \(p=8\)).</p></details>
+</section>
+<!-- QA:FIN -->
+
 <footer>
   Basado en el informe final del Proyecto 4 (CS4052, Prof. José Fiestas, noviembre 2026). Código y datos: <a href="https://github.com/CesarPR30/Proyecto_Paralela_Ranking-Sort">Proyecto_Paralela_Ranking-Sort</a>.
 </footer>
@@ -867,5 +1004,60 @@ window.addEventListener('load', function () {
   }
 });
 </script>
+<!-- PLAYER:INICIO -->
+<script>
+/* ---------- reproductor de audio (sigue con la pantalla bloqueada) ---------- */
+(function () {
+  var TR = [{titulo:'Resumen completo',audio:"media/audio/resumen.m4a",poster:"media/posters/resumen.jpg",dur:"7:45"},{titulo:'Preguntas y respuestas',audio:"media/audio/preguntas.m4a",poster:"media/posters/preguntas.jpg",dur:"11:50"},{titulo:'Explicación detallada',audio:"media/audio/explicativo.m4a",poster:"media/posters/explicativo.jpg",dur:"18:01"},{titulo:'El informe a fondo',audio:"media/audio/informe.m4a",poster:"media/posters/informe.jpg",dur:"17:07"}];
+  var au = document.getElementById('plAudio'), title = document.getElementById('plTitle'),
+      infoEl = document.getElementById('plInfo'), btns = document.querySelectorAll('#plTracks button');
+  var KEY = 'repaso-audio', cur = -1;
+  function guardar() { try { localStorage.setItem(KEY, JSON.stringify({ i: cur, t: au.currentTime })); } catch (e) {} }
+  function cargar(i, t, reproducir) {
+    if (i < 0 || i >= TR.length) return;
+    cur = i;
+    au.src = TR[i].audio;
+    btns.forEach(function (b, k) { b.setAttribute('aria-current', k === i ? 'true' : 'false'); });
+    title.textContent = TR[i].titulo;
+    infoEl.textContent = 'Pista ' + (i + 1) + ' de ' + TR.length + ' · ' + TR[i].dur;
+    if (t) au.addEventListener('loadedmetadata', function f() { au.currentTime = t; au.removeEventListener('loadedmetadata', f); });
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: TR[i].titulo, artist: 'Repaso Ranking Sort', album: 'CS4052 · Proyecto 4',
+        artwork: [{ src: TR[i].poster, sizes: '960x540', type: 'image/jpeg' }]
+      });
+    }
+    if (reproducir) au.play().catch(function () {});
+  }
+  btns.forEach(function (b) { b.addEventListener('click', function () { cargar(+b.dataset.i, 0, true); }); });
+  au.addEventListener('ended', function () { if (cur + 1 < TR.length) cargar(cur + 1, 0, true); });
+  au.addEventListener('pause', guardar);
+  au.addEventListener('timeupdate', function () {
+    if (Math.floor(au.currentTime) % 10 === 0) guardar();
+    if ('mediaSession' in navigator && navigator.mediaSession.setPositionState && au.duration) {
+      try { navigator.mediaSession.setPositionState({ duration: au.duration, playbackRate: au.playbackRate, position: au.currentTime }); } catch (e) {}
+    }
+  });
+  if ('mediaSession' in navigator) {
+    var ms = navigator.mediaSession, h = function (a, f) { try { ms.setActionHandler(a, f); } catch (e) {} };
+    h('play', function () { au.play(); }); h('pause', function () { au.pause(); });
+    h('previoustrack', function () { if (au.currentTime > 5 || cur === 0) au.currentTime = 0; else cargar(cur - 1, 0, true); });
+    h('nexttrack', function () { cargar(cur + 1, 0, true); });
+    h('seekbackward', function (d) { au.currentTime = Math.max(0, au.currentTime - (d.seekOffset || 10)); });
+    h('seekforward', function (d) { au.currentTime = Math.min(au.duration || 1e9, au.currentTime + (d.seekOffset || 10)); });
+    h('seekto', function (d) { au.currentTime = d.seekTime; });
+  }
+  /* un solo medio a la vez */
+  document.querySelectorAll('.vid video').forEach(function (v) {
+    v.addEventListener('play', function () { au.pause();
+      document.querySelectorAll('.vid video').forEach(function (o) { if (o !== v) o.pause(); }); });
+  });
+  au.addEventListener('play', function () { document.querySelectorAll('.vid video').forEach(function (v) { v.pause(); }); });
+  var s = null; try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  if (s && s.i >= 0) cargar(s.i, s.t, false); else cargar(0, 0, false);
+})();
+</script>
+<!-- PLAYER:FIN -->
+
 </body>
 </html>
