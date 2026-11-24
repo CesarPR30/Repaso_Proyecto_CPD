@@ -259,7 +259,7 @@ img, video, svg { max-width: 100%; }
 <section class="step" id="videos">
   <div class="kicker">Material de repaso</div>
   <h2>Videos y audios</h2>
-  <p class="lead">Cuatro videos narrados. Empieza por el resumen; las preguntas y respuestas sirven para practicar antes de la evaluación.</p>
+  <p class="lead">Cinco videos narrados. Empieza por el resumen; las preguntas y respuestas sirven para practicar antes de la evaluación, y el de fórmulas explica cada término (también por escrito en <a href="https://github.com/CesarPR30/Repaso_Proyecto_CPD/blob/main/FORMULAS.md">FORMULAS.md</a>).</p>
 
   <div class="card player" id="player">
     <div class="now"><b id="plTitle">Escuchar con la pantalla bloqueada</b><span id="plInfo">Elige una pista</span></div>
@@ -267,8 +267,9 @@ img, video, svg { max-width: 100%; }
     <ol class="tracks" id="plTracks">
       <li><button type="button" data-i="0"><span>1. Resumen completo</span><small>7:45</small></button></li>
       <li><button type="button" data-i="1"><span>2. Preguntas y respuestas</span><small>11:50</small></button></li>
-      <li><button type="button" data-i="2"><span>3. Explicación detallada</span><small>18:01</small></button></li>
-      <li><button type="button" data-i="3"><span>4. El informe a fondo</span><small>17:07</small></button></li>
+      <li><button type="button" data-i="2"><span>3. Las fórmulas, término a término</span><small>16:34</small></button></li>
+      <li><button type="button" data-i="3"><span>4. Explicación detallada</span><small>18:01</small></button></li>
+      <li><button type="button" data-i="4"><span>5. El informe a fondo</span><small>17:07</small></button></li>
     </ol>
     <p class="hint">Los navegadores del celular pausan los <em>videos</em> al bloquear la pantalla, pero el <em>audio</em> sigue sonando y se controla desde la pantalla de bloqueo. Al terminar una pista pasa sola a la siguiente, y recuerda dónde te quedaste.</p>
   </div>
@@ -287,6 +288,13 @@ img, video, svg { max-width: 100%; }
         <p>20 preguntas de análisis: el porqué de cada decisión y de dónde sale cada fórmula.</p>
         <a href="media/videos/preguntas.mp4" download>Descargar video (19 MB)</a> ·
         <a href="media/audio/preguntas.m4a" download>solo audio (10 MB)</a></figcaption>
+    </figure>
+    <figure class="vid">
+      <video controls playsinline preload="none" poster="media/posters/formulas.jpg" src="media/videos/formulas.mp4"></video>
+      <figcaption><b>Las fórmulas, término a término</b> · 16:34
+        <p>Speedup, eficiencia, trabajo, costo, escalabilidad e isoeficiencia: qué significa cada término y cómo se deriva.</p>
+        <a href="media/videos/formulas.mp4" download>Descargar video (25 MB)</a> ·
+        <a href="media/audio/formulas.m4a" download>solo audio (14 MB)</a></figcaption>
     </figure>
     <figure class="vid">
       <video controls playsinline preload="none" poster="media/posters/explicativo.jpg" src="media/videos/explicativo.mp4"></video>
@@ -1008,7 +1016,7 @@ window.addEventListener('load', function () {
 <script>
 /* ---------- reproductor de audio (sigue con la pantalla bloqueada) ---------- */
 (function () {
-  var TR = [{titulo:'Resumen completo',audio:"media/audio/resumen.m4a",poster:"media/posters/resumen.jpg",dur:"7:45"},{titulo:'Preguntas y respuestas',audio:"media/audio/preguntas.m4a",poster:"media/posters/preguntas.jpg",dur:"11:50"},{titulo:'Explicación detallada',audio:"media/audio/explicativo.m4a",poster:"media/posters/explicativo.jpg",dur:"18:01"},{titulo:'El informe a fondo',audio:"media/audio/informe.m4a",poster:"media/posters/informe.jpg",dur:"17:07"}];
+  var TR = [{titulo:'Resumen completo',audio:"media/audio/resumen.m4a",poster:"media/posters/resumen.jpg",dur:"7:45"},{titulo:'Preguntas y respuestas',audio:"media/audio/preguntas.m4a",poster:"media/posters/preguntas.jpg",dur:"11:50"},{titulo:'Las fórmulas, término a término',audio:"media/audio/formulas.m4a",poster:"media/posters/formulas.jpg",dur:"16:34"},{titulo:'Explicación detallada',audio:"media/audio/explicativo.m4a",poster:"media/posters/explicativo.jpg",dur:"18:01"},{titulo:'El informe a fondo',audio:"media/audio/informe.m4a",poster:"media/posters/informe.jpg",dur:"17:07"}];
   var au = document.getElementById('plAudio'), title = document.getElementById('plTitle'),
       infoEl = document.getElementById('plInfo'), btns = document.querySelectorAll('#plTracks button');
   var KEY = 'repaso-audio', cur = -1;
